@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Private Access Only</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #000; height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center; color: #fff; overflow: hidden; }
+        #bgCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .glass-card { background: rgba(255, 255, 255, 0.05); padding: 40px 25px; border-radius: 30px; text-align: center; width: 85%; max-width: 340px; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); animation: fadeIn 0.5s ease-out; }
+        .ufo-icon { font-size: 50px; margin-bottom: 15px; display: block; filter: drop-shadow(0 0 10px rgba(255,255,255,0.5)); }
+        h2 { font-weight: 800; letter-spacing: 2px; margin-bottom: 10px; font-size: 1.4rem; color: rgba(255,255,255,0.9); }
+        .input-group { position: relative; width: 100%; margin-bottom: 15px; }
+        input { width: 100%; padding: 18px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.3); color: #fff; text-align: center; font-size: 1rem; outline: none; transition: 0.3s; }
+        input:focus { border-color: #00ff88; background: rgba(0, 0, 0, 0.5); }
+        .toggle-btn { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); cursor: pointer; width: 22px; height: 22px; border: 2px solid #00ff88; border-radius: 50%; box-shadow: 0 0 8px #00ff88; display: flex; justify-content: center; align-items: center; color: #00ff88; font-weight: bold; font-size: 12px; }
+        .btn-unlock { width: 100%; padding: 18px; border-radius: 15px; border: none; background: rgba(255, 255, 255, 0.9); color: #000; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 999; }
+        .modal-box { background: rgba(20, 20, 20, 0.8); padding: 40px 25px; border-radius: 35px; border: 1px solid rgba(0, 255, 136, 0.3); text-align: center; width: 85%; max-width: 320px; backdrop-filter: blur(20px); animation: fadeIn 0.5s ease-out; box-shadow: 0 10px 40px rgba(0, 255, 136, 0.2); }
+        .modal-box h3 { color: #00ff88; font-size: 1.5rem; margin-top: 0; margin-bottom: 10px; }
+        .btn-save { width: 100%; padding: 18px; border-radius: 15px; border: none; background: #00ff88; color: #000; font-weight: 800; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        .admin-trigger { position: fixed; bottom: 15px; right: 15px; font-size: 11px; color: #ffffff; cursor: pointer; opacity: 0.3; }
+        .close-link { display: inline-block; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.9rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bgCanvas"></canvas>
+
+    <div id="mainCard" class="glass-card">
+        <span class="ufo-icon">🛸</span>
+        <h2>VERIFIED ACCESS</h2>
+        <div class="input-group">
+            <input type="password" id="passInput" placeholder="ENTER ACCESS CODE">
+            <div id="eyeBtn" class="toggle-btn" onclick="toggleView()"></div>
+        </div>
+        <button class="btn-unlock" onclick="cekAkses()">UNLOCK</button>
+        <p style="margin-top:20px; font-size:0.8rem; color:#888;">
+            Need access? <a href="https://wa.me/6289528003770" style="color:#00ff88; text-decoration:none;">Request to Hxchi</a>
+        </p>
+    </div>
+
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Admin Tools</h3>
+            <div id="adminLoginArea">
+                <input type="password" id="adminPass" placeholder="Admin PIN">
+                <button onclick="loginAdmin()" class="btn-save" style="background:#fff">LOGIN</button>
+            </div>
+            <div id="adminTools" style="display:none">
+                <p style="font-size: 11px; color: #888; margin: 5px 0;">New User Code:</p>
+                <input type="text" id="newCodeInput" placeholder="Ex: 251209">
+                <p style="font-size: 11px; color: #888; margin: 5px 0;">New Target Link:</p>
+                <input type="text" id="newLinkInput" placeholder="https://x.com/...">
+                <button onclick="saveChanges()" class="btn-save">SAVE TO CLOUD</button>
+            </div>
+            <div class="close-link" onclick="tutupModal('adminModal')">Close</div>
+        </div>
+    </div>
+
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-box" style="border-color: #ff4d4d;">
+            <h3 style="color:#ff4d4d">INVALID CODE!</h3>
+            <p style="color:#ccc; font-size:0.9rem">Please request the access code to Hxchi.</p>
+            <button onclick="tutupModal('errorModal')" class="btn-save" style="background:#ff4d4d; color:#fff">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <div class="admin-trigger" onclick="document.getElementById('adminModal').style.display='flex'">Manage Access</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAYp6E1jVZvfv-2bQ2GGso444HeM06zHFo",
+        databaseURL: "https://hxchiacces-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // BACKGROUND ANIMATION
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, frame = 0;
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    function drawBackground() {
+        ctx.fillStyle = "black"; ctx.fillRect(0, 0, width, height);
+        const spacing = 14; frame += 0.025; 
+        for (let x = 0; x < width; x += spacing) {
+            for (let y = 0; y < height; y += spacing) {
+                const dx = x - width / 2; const dy = y - height / 2;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const wave = Math.sin(dist * 0.04 - frame * 3) + Math.sin((x + y) * 0.02 + frame);
+                const size = (wave + 1) * 3.8;
+                ctx.save(); ctx.translate(x, y); ctx.fillStyle = `rgba(255, 255, 255, ${size / 15})`;
+                ctx.fillRect(-size / 2, -size / 2, size, size); ctx.restore();
+            }
+        }
+        requestAnimationFrame(drawBackground);
+    }
+    drawBackground();
+
+    function toggleView() {
+        const x = document.getElementById("passInput");
+        x.type = (x.type === "password") ? "text" : "password";
+        document.getElementById("eyeBtn").innerHTML = (x.type === "text") ? "✕" : "";
+    }
+
+    // CEK AKSES & REDIRECT
+    function cekAkses() {
+        const input = document.getElementById("passInput").value;
+        db.ref('/').once('value').then((s) => {
+            const data = s.val();
+            if (input === data.accessCode) { 
+                // Redirect ke link yang ada di Firebase
+                window.location.href = data.targetLink || "https://twitter.com/Xnhottt"; 
+            } else { 
+                document.getElementById("errorModal").style.display = "flex"; 
+            }
+        });
+    }
+
+    function loginAdmin() {
+        if(document.getElementById("adminPass").value === "181206") {
+            document.getElementById("adminTools").style.display = "block";
+            document.getElementById("adminLoginArea").style.display = "none";
+        } else { alert("Wrong PIN!"); }
+    }
+
+    // SIMPAN KODE & LINK KE FIREBASE
+    function saveChanges() {
+        const code = document.getElementById("newCodeInput").value;
+        const link = document.getElementById("newLinkInput").value;
+        const updates = {};
+        if(code) updates.accessCode = code;
+        if(link) updates.targetLink = link;
+
+        db.ref('/').update(updates).then(() => {
+            alert("Success Updated!");
+            location.reload();
+        });
+    }
+
+    function tutupModal(id) { document.getElementById(id).style.display = "none"; }
+</script>
+</body>
+</html>
+
